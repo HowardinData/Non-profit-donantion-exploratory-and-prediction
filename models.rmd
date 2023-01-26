@@ -1,0 +1,167 @@
+---
+title: "SHH Tech Document - Models"
+author: "Team Green"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Mutliple Regression Models  
+
+The following models are different versions of the multiple regression models run for analysis of different features and outcomes. This model uses the frequency of donations and the coefficients of the regression model are used to explain the relationships between the predictors and the outputs. 
+
+```{r}
+library(dplyr)
+```
+
+## Non-holiday, individual  
+
+``` {r}
+gift_media <- read.csv('gift_media_nonholiday_mt.csv')
+temp <- gift_media %>% select(y_indiv, starts_with('x_'))
+model_nh_i <- lm(y_indiv ~  x_mt_web_print +
+                  x_mt_tv + x_mt_web_article + 
+                  x_acquisition_mail + x_other_mailings +
+                  x_shh_events, data=temp)
+summary(model_nh_i)
+```
+
+## Holiday, individual  
+
+```{r}
+gift_media <- read.csv('gift_media_holiday_mt.csv')
+temp <- gift_media %>% select(y_indiv, starts_with('x_'))
+model_h_i <- lm(y_indiv ~ . -x_media_count -x_reach -x_desktop_reach
+                 -x_mobile_reach -x_facebook_social_echo -x_ave
+                 -x_newspaper_inserts +x_mt_radio -x_reddit_social_echo
+                 -x_hunger -x_neutral -x_other_mailings -x_positive
+                 -x_cultivation_mail_appeal -x_shh_events -x_mt_web_print
+                 -x_in_headline -x_mt_web_article -x_print_newsletter
+                 -x_e.appeals -x_local, data=temp)
+summary(model_h_i)
+```
+
+## Non-holiday, organization  
+
+```{r}
+gift_media <- read.csv('gift_media_nonholiday_var_win.csv')
+temp <- gift_media %>% select(y_org, starts_with('x_'))
+model_nh_o <- lm(y_org ~ x_in_headline  + x_mt_web_print +
+                 x_mt_tv + x_mt_web_article + x_mt_radio + x_mt_print +
+                 x_mt_web_video + x_acquisition_mail + x_other_mailings +
+                 x_shh_events, data=temp)
+summary(model_nh_o)
+```
+
+## Holiday, organization  
+
+```{r}
+gift_media <- read.csv('gift_media_holiday_var_win.csv')
+temp <- gift_media %>% select(y_org, starts_with('x_'))
+model_h_o <- lm(y_org ~ .-x_newspaper_inserts -x_desktop_reach -x_reach
+                -x_facebook_social_echo -x_ave -x_mobile_reach -x_in_headline 
+                -x_media_count -x_other_mailings -x_neutral -x_positive
+                -x_reddit_social_echo -x_cultivation_mail_appeal -x_shh_events, 
+                data=temp)
+summary(model_h_o)
+```
+
+# Prediction Model
+
+This model is focused on predicting the dollar amount using a random forrest model. 
+
+```{r cars}
+library(dplyr)
+library(readr)
+library(caret)
+library(class)
+library(skimr)
+library(rpart)
+library(e1071)
+library(pROC)
+library(PRROC)
+library(ROSE)
+library(readxl)
+library(randomForest)
+```
+
+## Get ready
+
+```{r pressure, echo=FALSE}
+ssh = read_csv('/Users/hao/Desktop/MSBA 6130 (R)/live case/Outbox/final/predict_data_holiday_mt.csv')
+ssh = ssh %>% mutate(acquisition_mail =as.factor(acquisition_mail),
+                                    e_appeals = as.factor(e_appeals),
+                                    acquisition_mail =as.factor(acquisition_mail),
+                                    cultivation_mail_appeal = as.factor(cultivation_mail_appeal),
+                                    newspaper_inserts =as.factor(newspaper_inserts),
+                                    other_mailings =as.factor(other_mailings),
+                                    print_newsletter = as.factor(print_newsletter),
+                                    shh_events = as.factor(shh_events) )
+
+
+ssh = ssh %>% select(-media_count,-amount_o)
+
+
+train_rows <- createDataPartition(y = ssh$amount_i, p = 0.7, list=FALSE)
+ssh_train <- ssh[train_rows,]
+ssh_hold <- ssh[-train_rows,]
+
+val_rows <- createDataPartition(y = ssh_hold$amount_i, p = 2/3, list=FALSE)
+ssh_val <- ssh_hold [val_rows,]
+ssh_test <- ssh_hold [-val_rows,]
+```
+
+
+
+# Select model
+```{r}
+err <- as.numeric()
+RF = 0
+RM = 10000000
+NODE = 0
+
+for(i in 1:(ncol(ssh_train)-10)){
+  for(j in (10:50)){
+    rf <- randomForest(amount ~ ., data=ssh_train,mtry=i,nodesize=j, ntree=1000 ,importance=TRUE)
+    ssh_prd <- predict(rf ,ssh_val )
+    rm = RMSE(ssh_prd , ssh_val$amount)
+    
+    err <- append(err,rm)
+    
+    if (rm < RM){
+      RM = rm
+      RF = rf
+      NODE = j
+    }
+    
+    }
+}
+```
+
+
+# Performance
+```{r}
+RM
+mean(ssh_val$amount_i)
+sd(ssh_val$amount_i)
+varImpPlot(RF)
+```
+
+
+# Test for donation amount if 100% earned media comes from specific media channel
+```{r}
+data_point = read_csv('/Users/hao/Desktop/MSBA 6130 (R)/live case/Outbox/final/test_holiday.csv')
+data_point = data_point %>% select(-media_count,-amount_o)
+data_point= data_point%>% mutate(acquisition_mail =factor(0,level = c(0,1)),
+                                 e_appeals = factor(0,level = c(0,1)),
+                                 acquisition_mail =factor(0,level = c(0,1)),
+                                 cultivation_mail_appeal = factor(0,level = c(0,1)),
+                                 newspaper_inserts =factor(0,level = c(0,1)),
+                                 other_mailings =factor(0,level = c(0,1)),
+                                 print_newsletter = factor(0,level = c(0,1)),
+                                 shh_events = factor(0,level = c(0,1)) )
+p = predict(rf.fit, data_point)
+p
+```
