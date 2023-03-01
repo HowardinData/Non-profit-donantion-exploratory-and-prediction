@@ -3,10 +3,15 @@
 Second Harvest Heartland is a nonprofit organization working towards ending hunger through community partnerships. 
 They procures food from different sources, partner with community services like food shelves and meal programs, and as provided 105 million meals in 2021 alone.
 
-## Task
+## Business Goal
 Using 2 years of data to understand factors affecting donation outcomes based on earned media for Second harvest heartland and build a machine learning model to predict donation amount.
 
-## Action
+<img width="574" alt="截圖 2023-03-01 上午11 34 11" src="https://user-images.githubusercontent.com/102202557/222218742-e2a4a31f-ba14-4603-a5e7-27717a3117fd.png">
+
+
+## Analysis Plan
+<img width="586" alt="截圖 2023-03-01 上午11 33 36" src="https://user-images.githubusercontent.com/102202557/222217921-10aa28ca-268e-4bfa-8050-218bdb06eb99.png">
+
 #### "data processing and linear model.ipynb"
   1. Categorized earned media into 4 categories.
   2. Ran linear model on donation amount and calculated variation by changing window values (highest explained variation is best to do the roll-up).
